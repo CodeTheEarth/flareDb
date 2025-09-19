@@ -1,4 +1,4 @@
-# FlareDB
+# FlareDB 🔥
 ## Introduction:
 
 FlareDb is an ongoing project  that focuses on simplicity and efficiency. It is intended to be a self hosted database where individuals will be able to host and use with ease. The purpose of  `FlareDb` is not to compete with the likes of `sqlite`, `mongodb` and so on but rather to aid our organisation [CodeTheEarth](https://github.com/CodeTheEarth)
