@@ -19,3 +19,4 @@ Project flareDB as stated above is to aid our organisation [CodeTheEarth](https:
 - [King david](https://github.com/KING-DAVIDX)
 - [Xcelsama](https://github.com/Xcelsama)
 
+> CODE THE EARTH !!
