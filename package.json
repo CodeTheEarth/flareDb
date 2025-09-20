@@ -1,0 +1,25 @@
+{
+  "name": "flaredb",
+  "version": "1.0.0",
+  "type": "module",
+  "description": "FlareDb is an ongoing project  that focuses on simplicity and efficiency. It is intended to be a self hosted database where individuals will be able to host and use with ease. The purpose of  `FlareDb` is not to compete with the likes of `sqlite`, `mongodb` and so on but rather to aid our organisation [CodeTheEarth](https://github.com/CodeTheEarth)",
+  "main": "index.js",
+  "directories": {
+    "doc": "docs",
+    "test": "test"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/CodeTheEarth/flareDb.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/CodeTheEarth/flareDb/issues"
+  },
+  "homepage": "https://github.com/CodeTheEarth/flareDb#readme"
+}
