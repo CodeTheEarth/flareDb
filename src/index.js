@@ -15,22 +15,32 @@ class Flare {
   }
 
   async init() {
-  try {
-    await fs.writeFile(this.filename, "", { flag: "a" });
-    await fs.writeFile(this.walFile, "", { flag: "a" });
-    await this._recoverFromWal();
-  } catch (err) {
-    throw new Error(`Failed to initialize DB: ${err.message}`);
+    try {
+      await fs.writeFile(this.filename, "", { flag: "a" });
+      await fs.writeFile(this.walFile, "", { flag: "a" });
+      await this._recoverFromWal();
+    } catch (err) {
+      throw new Error(`Failed to initialize DB: ${err.message}`);
+    }
   }
-}
 
   collection(name, schema) {
-    if (!name || typeof name !== "string") throw new Error("Collection name must be a non-empty string");
-    if (this.collections[name]) throw new Error(`Collection "${name}" already exists`);
-    if (!schema || typeof schema !== "object") throw new Error("Schema must be a valid object");
+    if (!name || typeof name !== "string") {
+      throw new Error("Collection name must be a non-empty string");
+    }
+    if (!schema || typeof schema !== "object") {
+      throw new Error("Schema must be a valid object");
+    }
+
+
+    if (this.collections[name]) {
+      return this.collections[name];
+    }
 
     const col = new Collection(this, name, schema);
     this.collections[name] = col;
+    return col;
+
     return col;
   }
 
