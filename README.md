@@ -43,7 +43,17 @@ console.log("All users:", all)
 const haki = await Users.findOne({ name: "Kaima" });
 console.log("Find one:", haki.age);
 ```
-Delete and Update coming soon...
+- Update 
+```
+await Users.updateOne({ name: "Haki" }, { age: 19 }); // update first match
+await Users.updateMany({ age: 20 }, { age: 21 }); // bulk update
+```
+- Delete
+```
+await Users.deleteOne({ name: "Kaima" }); // delete first match
+await Users.deleteMany({ age: 21 }); // delete all matches
+await Users.clear(); // wipe entire collection
+```
 
 ### Contributors
 - [Haki](https://github.com/hakisolos)

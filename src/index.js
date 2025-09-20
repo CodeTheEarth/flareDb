@@ -15,14 +15,14 @@ class Flare {
   }
 
   async init() {
-    try {
-      await fs.open(this.filename, "a+");
-      await fs.open(this.walFile, "a+");
-      await this._recoverFromWal();
-    } catch (err) {
-      throw new Error(`Failed to initialize DB: ${err.message}`);
-    }
+  try {
+    await fs.writeFile(this.filename, "", { flag: "a" });
+    await fs.writeFile(this.walFile, "", { flag: "a" });
+    await this._recoverFromWal();
+  } catch (err) {
+    throw new Error(`Failed to initialize DB: ${err.message}`);
   }
+}
 
   collection(name, schema) {
     if (!name || typeof name !== "string") throw new Error("Collection name must be a non-empty string");
