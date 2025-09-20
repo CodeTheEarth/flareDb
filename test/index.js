@@ -7,12 +7,10 @@ async function main() {
 
   await Users.put({ name: "Haki", age: 18 });
   await Users.put({ name: "Kaima", age: 20 });
-
-  const all = await Users.find();
-  console.log("All users:", all);
-
-  const haki = await Users.findOne({ name: "Kaima" });
-  console.log("Find one:", haki.age);
+  const haki = await Users.findOne({name: "Haki"})
+  console.log(`former user ${haki} `)
+  await Users.updateOne({name: "Haki"}, {name: "shell D. haki"})
+  console.log("newuser: ", haki)
 }
 
 main();
