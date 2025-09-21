@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    // ✅ Project Structure
+    "rootDir": "./src",          // your source TS files
+    "outDir": "./dist",          // compiled JS output
+
+    // ✅ Module Resolution & Output
+    "module": "nodenext",        // Node 16+/ESM
+    "moduleResolution": "nodenext",
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "verbatimModuleSyntax": true,
+
+    // ✅ Target environment
+    "target": "ES2022",          // modern JS
+    "lib": ["ES2022"],           // lib for ES2022 features
+    "types": ["node"],           // Node types
+
+    // ✅ Type Checking
+    "strict": true,
+    "noUncheckedIndexedAccess": true,
+    "exactOptionalPropertyTypes": true,
+    "isolatedModules": true,
+    "noUncheckedSideEffectImports": true,
+
+    // ✅ Output
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true,
+
+    // ✅ Other recommended settings
+    "skipLibCheck": true,
+    "moduleDetection": "force"
+  },
+  "include": ["src/**/*"],
+  "exclude": ["node_modules", "dist"]
+}
