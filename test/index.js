@@ -1,4 +1,4 @@
-import Flare from "../src/index.js";
+import Flare from "../dist/index.js";
 async function main() {
   const db = new Flare("users.db");
   await db.init();
@@ -14,3 +14,4 @@ async function main() {
 }
 
 main();
+

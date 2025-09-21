@@ -1,9 +1,13 @@
 import crypto from "crypto";
 import Document from "./Document.js";
-
+import Flare from "./index.js"; 
 
 export class Collection {
-  constructor(db, name, schema) {
+  db: Flare;
+  name: string;
+  schema: Record<string, string>;
+
+  constructor(db: Flare, name: string, schema: Record<string, string>) {
     if (!db) throw new Error("Collection must be attached to a Flare instance");
     if (!name || typeof name !== "string") throw new Error("Collection name must be a non-empty string");
     if (!schema || typeof schema !== "object") throw new Error("Collection schema must be an object");
@@ -13,7 +17,7 @@ export class Collection {
     this.schema = schema;
   }
 
-  _validate(doc) {
+  _validate(doc: Record<string, any>) {
     if (!doc || typeof doc !== "object") {
       throw new Error("Document must be a non-null object");
     }
@@ -28,44 +32,39 @@ export class Collection {
     }
   }
 
-  async put(doc, { upsert = false, uniqueBy = [] } = {}) {
-  if (!doc || typeof doc !== "object") {
-    throw new Error("Document must be a non-null object");
-  }
+  async put(doc: Record<string, any>, options: { upsert?: boolean; uniqueBy?: string[] } = {}): Promise<Document> {
+    if (!doc || typeof doc !== "object") throw new Error("Document must be a non-null object");
 
+    this._validate(doc);
 
-  this._validate(doc);
+    const { upsert = false, uniqueBy = [] } = options;
 
-
-  if (upsert || uniqueBy.length > 0) {
-    const query = {};
-    for (const key of uniqueBy) {
-      if (doc[key] !== undefined) query[key] = doc[key];
-    }
-    if (Object.keys(query).length > 0) {
-      const existing = await this.findOne(query);
-      if (existing) {
-   
-        Object.assign(existing, doc, { updated_at: new Date().toISOString() });
-        await this.db.put(`${this.name}:${existing._id}`, existing);
-        return new Document(existing);
+    if (upsert || uniqueBy.length > 0) {
+      const query: Record<string, any> = {};
+      for (const key of uniqueBy) {
+        if (doc[key] !== undefined) query[key] = doc[key];
+      }
+      if (Object.keys(query).length > 0) {
+        const existing = await this.findOne(query);
+        if (existing) {
+          Object.assign(existing, doc, { updated_at: new Date().toISOString() });
+          await this.db.put(`${this.name}:${existing._id}`, existing);
+          return new Document(existing);
+        }
       }
     }
+
+    if (!doc._id) doc._id = crypto.randomUUID();
+    if (!doc.created_at) doc.created_at = new Date().toISOString();
+
+    await this.db.put(`${this.name}:${doc._id}`, doc);
+    return new Document(doc);
   }
 
-
-  if (!doc._id) doc._id = crypto.randomUUID();
-  if (!doc.created_at) doc.created_at = new Date().toISOString();
-
-  await this.db.put(`${this.name}:${doc._id}`, doc);
-  return new Document(doc);
-}
-
-
-    async find(query = {}) {
+  async find(query: Record<string, any> = {}): Promise<Document[]> {
     if (typeof query !== "object") throw new Error("Query must be an object");
 
-    const results = [];
+    const results: Document[] = [];
     for await (const doc of this.db.scanCollection(this.name)) {
       let match = true;
       for (const [qk, qv] of Object.entries(query)) {
@@ -87,7 +86,7 @@ export class Collection {
     return results;
   }
 
-  async findOne(query = {}) {
+  async findOne(query: Record<string, any> = {}): Promise<Document | null> {
     if (typeof query !== "object") throw new Error("Query must be an object");
 
     for await (const doc of this.db.scanCollection(this.name)) {
@@ -111,19 +110,12 @@ export class Collection {
     return null;
   }
 
-
-  async updateOne(query, update) {
-    if (!query || typeof query !== "object") {
-      throw new Error("updateOne query must be an object");
-    }
-    if (!update || typeof update !== "object") {
-      throw new Error("updateOne update must be an object");
-    }
+  async updateOne(query: Record<string, any>, update: Record<string, any>): Promise<Document> {
+    if (!query || typeof query !== "object") throw new Error("updateOne query must be an object");
+    if (!update || typeof update !== "object") throw new Error("updateOne update must be an object");
 
     const doc = await this.findOne(query);
-    if (!doc) {
-      throw new Error(`No document found for query: ${JSON.stringify(query)}`);
-    }
+    if (!doc) throw new Error(`No document found for query: ${JSON.stringify(query)}`);
 
     Object.assign(doc, update, { updated_at: new Date().toISOString() });
     this._validate(doc);
@@ -131,20 +123,14 @@ export class Collection {
     return new Document(doc);
   }
 
-  async updateMany(query, update) {
-    if (!query || typeof query !== "object") {
-      throw new Error("updateMany query must be an object");
-    }
-    if (!update || typeof update !== "object") {
-      throw new Error("updateMany update must be an object");
-    }
+  async updateMany(query: Record<string, any>, update: Record<string, any>): Promise<Document[]> {
+    if (!query || typeof query !== "object") throw new Error("updateMany query must be an object");
+    if (!update || typeof update !== "object") throw new Error("updateMany update must be an object");
 
     const docs = await this.find(query);
-    if (docs.length === 0) {
-      throw new Error(`No documents found for query: ${JSON.stringify(query)}`);
-    }
+    if (docs.length === 0) throw new Error(`No documents found for query: ${JSON.stringify(query)}`);
 
-    const updated = [];
+    const updated: Document[] = [];
     for (const doc of docs) {
       Object.assign(doc, update, { updated_at: new Date().toISOString() });
       this._validate(doc);
@@ -154,29 +140,21 @@ export class Collection {
     return updated;
   }
 
-  async deleteOne(query) {
-    if (!query || typeof query !== "object") {
-      throw new Error("deleteOne query must be an object");
-    }
+  async deleteOne(query: Record<string, any>): Promise<Document> {
+    if (!query || typeof query !== "object") throw new Error("deleteOne query must be an object");
 
     const doc = await this.findOne(query);
-    if (!doc) {
-      throw new Error(`No document found to delete for query: ${JSON.stringify(query)}`);
-    }
+    if (!doc) throw new Error(`No document found to delete for query: ${JSON.stringify(query)}`);
 
     await this.db.del(`${this.name}:${doc._id}`);
     return doc;
   }
 
-  async deleteMany(query) {
-    if (!query || typeof query !== "object") {
-      throw new Error("deleteMany query must be an object");
-    }
+  async deleteMany(query: Record<string, any>): Promise<number> {
+    if (!query || typeof query !== "object") throw new Error("deleteMany query must be an object");
 
     const docs = await this.find(query);
-    if (docs.length === 0) {
-      throw new Error(`No documents found to delete for query: ${JSON.stringify(query)}`);
-    }
+    if (docs.length === 0) throw new Error(`No documents found to delete for query: ${JSON.stringify(query)}`);
 
     for (const doc of docs) {
       await this.db.del(`${this.name}:${doc._id}`);
@@ -184,7 +162,7 @@ export class Collection {
     return docs.length;
   }
 
-  async clear() {
+  async clear(): Promise<number> {
     let count = 0;
     for await (const doc of this.db.scanCollection(this.name)) {
       await this.db.del(`${this.name}:${doc._id}`);

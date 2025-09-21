@@ -3,10 +3,17 @@ import crypto from "crypto";
 import Mutex from "./mutex.js";
 import { Collection } from "./collection.js";
 
-class Flare {
-  constructor(filename) {
-    if (!filename || typeof filename !== "string") throw new Error("Filename must be a non-empty string");
-    if (!filename.endsWith(".db")) throw new Error("Filename must end with .db");
+class Flare<T = any> {
+  private filename: string;
+  private walFile: string;
+  private mutex: Mutex;
+  private collections: Record<string, Collection>;
+
+  constructor(filename: string) {
+    if (!filename || typeof filename !== "string")
+      throw new Error("Filename must be a non-empty string");
+    if (!filename.endsWith(".db"))
+      throw new Error("Filename must end with .db");
 
     this.filename = filename;
     this.walFile = filename + ".wal";
@@ -14,24 +21,23 @@ class Flare {
     this.collections = {};
   }
 
-  async init() {
+  async init(): Promise<void> {
     try {
       await fs.writeFile(this.filename, "", { flag: "a" });
       await fs.writeFile(this.walFile, "", { flag: "a" });
       await this._recoverFromWal();
-    } catch (err) {
+    } catch (err: any) {
       throw new Error(`Failed to initialize DB: ${err.message}`);
     }
   }
 
-  collection(name, schema) {
+  collection(name: string, schema: Record<string, string>): Collection {
     if (!name || typeof name !== "string") {
       throw new Error("Collection name must be a non-empty string");
     }
     if (!schema || typeof schema !== "object") {
       throw new Error("Schema must be a valid object");
     }
-
 
     if (this.collections[name]) {
       return this.collections[name];
@@ -40,24 +46,23 @@ class Flare {
     const col = new Collection(this, name, schema);
     this.collections[name] = col;
     return col;
-
-    return col;
   }
 
-  async _recoverFromWal() {
+  private async _recoverFromWal(): Promise<void> {
     try {
-      const walData = await fs.readFile(this.walFile);
+      const walData: Buffer = await fs.readFile(this.walFile);
       if (walData.length) {
         await fs.appendFile(this.filename, walData);
         await fs.truncate(this.walFile, 0);
       }
-    } catch (err) {
+    } catch (err: any) {
       throw new Error(`Failed to recover WAL: ${err.message}`);
     }
   }
 
-  async put(key, value) {
-    if (!key || typeof key !== "string") throw new Error("Key must be a non-empty string");
+  async put(key: string, value: T): Promise<void> {
+    if (!key || typeof key !== "string")
+      throw new Error("Key must be a non-empty string");
     return this.mutex.run(async () => {
       const valStr = JSON.stringify({ v: value, deleted: false });
       const keyBuf = Buffer.from(key);
@@ -73,14 +78,16 @@ class Flare {
         await fs.appendFile(this.walFile, record);
         await fs.appendFile(this.filename, record);
         await fs.truncate(this.walFile, 0);
-      } catch (err) {
+      } catch (err: any) {
         throw new Error(`Failed to put key "${key}": ${err.message}`);
       }
     });
   }
 
-  async get(key) {
-    if (!key || typeof key !== "string") throw new Error("Key must be a non-empty string");
+  async get(key: string): Promise<T | null> {
+    if (!key || typeof key !== "string")
+      throw new Error("Key must be a non-empty string");
+
     const fd = await fs.open(this.filename, "r");
     try {
       const stats = await fd.stat();
@@ -108,15 +115,16 @@ class Flare {
       }
 
       return null;
-    } catch (err) {
+    } catch (err: any) {
       throw new Error(`Failed to get key "${key}": ${err.message}`);
     } finally {
       await fd.close();
     }
   }
 
-  async del(key) {
-    if (!key || typeof key !== "string") throw new Error("Key must be a non-empty string");
+  async del(key: string): Promise<void> {
+    if (!key || typeof key !== "string")
+      throw new Error("Key must be a non-empty string");
     return this.mutex.run(async () => {
       const valStr = JSON.stringify({ v: null, deleted: true });
       const keyBuf = Buffer.from(key);
@@ -132,14 +140,15 @@ class Flare {
         await fs.appendFile(this.walFile, record);
         await fs.appendFile(this.filename, record);
         await fs.truncate(this.walFile, 0);
-      } catch (err) {
+      } catch (err: any) {
         throw new Error(`Failed to delete key "${key}": ${err.message}`);
       }
     });
   }
 
-  async *scanCollection(name) {
-    if (!name || typeof name !== "string") throw new Error("Collection name must be a non-empty string");
+  async *scanCollection(name: string): AsyncGenerator<T> {
+    if (!name || typeof name !== "string")
+      throw new Error("Collection name must be a non-empty string");
 
     const fd = await fs.open(this.filename, "r");
     try {
@@ -166,7 +175,7 @@ class Flare {
 
         pos += totalLen;
       }
-    } catch (err) {
+    } catch (err: any) {
       throw new Error(`Failed to scan collection "${name}": ${err.message}`);
     } finally {
       await fd.close();
