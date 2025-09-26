@@ -1,7 +1,8 @@
 import { promises as fs } from "fs";
-import crypto from "crypto";
+import path from "path";
 import Mutex from "./mutex.js";
 import { Collection } from "./collection.js";
+import FlareCache from "./flareCache.js";
 
 class Flare<T = any> {
   private filename: string;
@@ -15,37 +16,24 @@ class Flare<T = any> {
     if (!filename.endsWith(".db"))
       throw new Error("Filename must end with .db");
 
-    this.filename = filename;
-    this.walFile = filename + ".wal";
+    const dir = path.resolve("./flare");
+    this.filename = path.join(dir, filename);
+    this.walFile = this.filename + ".wal";
     this.mutex = new Mutex();
     this.collections = {};
+
+    // ensure db + wal files exist and recover
+    this._ensureFiles().then(() => this._recoverFromWal());
   }
 
-  async init(): Promise<void> {
+  private async _ensureFiles(): Promise<void> {
     try {
+      await fs.mkdir(path.dirname(this.filename), { recursive: true });
       await fs.writeFile(this.filename, "", { flag: "a" });
       await fs.writeFile(this.walFile, "", { flag: "a" });
-      await this._recoverFromWal();
     } catch (err: any) {
-      throw new Error(`Failed to initialize DB: ${err.message}`);
+      throw new Error(`Failed to prepare DB files: ${err.message}`);
     }
-  }
-
-  collection(name: string, schema: Record<string, string>): Collection {
-    if (!name || typeof name !== "string") {
-      throw new Error("Collection name must be a non-empty string");
-    }
-    if (!schema || typeof schema !== "object") {
-      throw new Error("Schema must be a valid object");
-    }
-
-    if (this.collections[name]) {
-      return this.collections[name];
-    }
-
-    const col = new Collection(this, name, schema);
-    this.collections[name] = col;
-    return col;
   }
 
   private async _recoverFromWal(): Promise<void> {
@@ -58,6 +46,21 @@ class Flare<T = any> {
     } catch (err: any) {
       throw new Error(`Failed to recover WAL: ${err.message}`);
     }
+  }
+
+  collection(name: string, schema: Record<string, string>): Collection {
+    if (!name || typeof name !== "string")
+      throw new Error("Collection name must be a non-empty string");
+    if (!schema || typeof schema !== "object")
+      throw new Error("Schema must be a valid object");
+
+    if (this.collections[name]) {
+      return this.collections[name];
+    }
+
+    const col = new Collection(this, name, schema);
+    this.collections[name] = col;
+    return col;
   }
 
   async put(key: string, value: T): Promise<void> {
@@ -184,3 +187,4 @@ class Flare<T = any> {
 }
 
 export default Flare;
+export { FlareCache };

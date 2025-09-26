@@ -30,10 +30,12 @@ var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: tru
 // src/index.ts
 var index_exports = {};
 __export(index_exports, {
+  FlareCache: () => FlareCache,
   default: () => index_default
 });
 module.exports = __toCommonJS(index_exports);
-var import_fs = require("fs");
+var import_fs2 = require("fs");
+var import_path2 = __toESM(require("path"), 1);
 
 // src/mutex.ts
 var Mutex = class {
@@ -237,6 +239,82 @@ var Collection = class {
   }
 };
 
+// src/flareCache.ts
+var import_fs = require("fs");
+var import_path = __toESM(require("path"), 1);
+var FlareCache = class {
+  store;
+  mutex;
+  dir;
+  aofFile;
+  constructor(options = {}) {
+    this.store = /* @__PURE__ */ new Map();
+    this.mutex = new mutex_default();
+    this.dir = options.dir || import_path.default.join(process.cwd(), "flare");
+    this.aofFile = import_path.default.join(this.dir, "aof.log");
+    this._init().catch((err) => {
+      console.error("Init error:", err);
+    });
+  }
+  async _init() {
+    await import_fs.promises.mkdir(this.dir, { recursive: true });
+    await import_fs.promises.access(this.aofFile).catch(() => import_fs.promises.writeFile(this.aofFile, ""));
+    await this._loadFromAOF();
+  }
+  async set(key, value) {
+    await this.mutex.run(async () => {
+      this.store.set(key, value);
+      await this._append({ op: "set", key, value });
+    });
+  }
+  get(key) {
+    return this.store.get(key);
+  }
+  async delete(key) {
+    await this.mutex.run(async () => {
+      this.store.delete(key);
+      await this._append({ op: "del", key });
+    });
+  }
+  keys() {
+    return Array.from(this.store.keys());
+  }
+  async _append(entry) {
+    const json = JSON.stringify(entry);
+    const data = Buffer.from(json, "utf-8");
+    const header = Buffer.alloc(4);
+    header.writeUInt32LE(data.length, 0);
+    await import_fs.promises.appendFile(this.aofFile, Buffer.concat([header, data]));
+  }
+  async _loadFromAOF() {
+    try {
+      const file = await import_fs.promises.readFile(this.aofFile);
+      let offset = 0;
+      while (offset < file.length) {
+        if (offset + 4 > file.length) break;
+        const len = file.readUInt32LE(offset);
+        offset += 4;
+        if (offset + len > file.length) break;
+        const slice = file.slice(offset, offset + len);
+        offset += len;
+        try {
+          const entry = JSON.parse(slice.toString("utf-8"));
+          if (entry.op === "set" && entry.value !== void 0) {
+            this.store.set(entry.key, entry.value);
+          }
+          if (entry.op === "del") {
+            this.store.delete(entry.key);
+          }
+        } catch {
+          console.error("Corrupted AOF entry at offset", offset);
+        }
+      }
+    } catch (err) {
+      console.error("Failed to load AOF:", err);
+    }
+  }
+};
+
 // src/index.ts
 var Flare2 = class {
   filename;
@@ -248,44 +326,44 @@ var Flare2 = class {
       throw new Error("Filename must be a non-empty string");
     if (!filename.endsWith(".db"))
       throw new Error("Filename must end with .db");
-    this.filename = filename;
-    this.walFile = filename + ".wal";
+    const dir = import_path2.default.resolve("./flare");
+    this.filename = import_path2.default.join(dir, filename);
+    this.walFile = this.filename + ".wal";
     this.mutex = new mutex_default();
     this.collections = {};
+    this._ensureFiles().then(() => this._recoverFromWal());
   }
-  async init() {
+  async _ensureFiles() {
     try {
-      await import_fs.promises.writeFile(this.filename, "", { flag: "a" });
-      await import_fs.promises.writeFile(this.walFile, "", { flag: "a" });
-      await this._recoverFromWal();
+      await import_fs2.promises.mkdir(import_path2.default.dirname(this.filename), { recursive: true });
+      await import_fs2.promises.writeFile(this.filename, "", { flag: "a" });
+      await import_fs2.promises.writeFile(this.walFile, "", { flag: "a" });
     } catch (err) {
-      throw new Error(`Failed to initialize DB: ${err.message}`);
+      throw new Error(`Failed to prepare DB files: ${err.message}`);
+    }
+  }
+  async _recoverFromWal() {
+    try {
+      const walData = await import_fs2.promises.readFile(this.walFile);
+      if (walData.length) {
+        await import_fs2.promises.appendFile(this.filename, walData);
+        await import_fs2.promises.truncate(this.walFile, 0);
+      }
+    } catch (err) {
+      throw new Error(`Failed to recover WAL: ${err.message}`);
     }
   }
   collection(name, schema) {
-    if (!name || typeof name !== "string") {
+    if (!name || typeof name !== "string")
       throw new Error("Collection name must be a non-empty string");
-    }
-    if (!schema || typeof schema !== "object") {
+    if (!schema || typeof schema !== "object")
       throw new Error("Schema must be a valid object");
-    }
     if (this.collections[name]) {
       return this.collections[name];
     }
     const col = new Collection(this, name, schema);
     this.collections[name] = col;
     return col;
-  }
-  async _recoverFromWal() {
-    try {
-      const walData = await import_fs.promises.readFile(this.walFile);
-      if (walData.length) {
-        await import_fs.promises.appendFile(this.filename, walData);
-        await import_fs.promises.truncate(this.walFile, 0);
-      }
-    } catch (err) {
-      throw new Error(`Failed to recover WAL: ${err.message}`);
-    }
   }
   async put(key, value) {
     if (!key || typeof key !== "string")
@@ -299,9 +377,9 @@ var Flare2 = class {
       header.writeUInt32LE(valBuf.length, 4);
       const record = Buffer.concat([header, keyBuf, valBuf]);
       try {
-        await import_fs.promises.appendFile(this.walFile, record);
-        await import_fs.promises.appendFile(this.filename, record);
-        await import_fs.promises.truncate(this.walFile, 0);
+        await import_fs2.promises.appendFile(this.walFile, record);
+        await import_fs2.promises.appendFile(this.filename, record);
+        await import_fs2.promises.truncate(this.walFile, 0);
       } catch (err) {
         throw new Error(`Failed to put key "${key}": ${err.message}`);
       }
@@ -310,7 +388,7 @@ var Flare2 = class {
   async get(key) {
     if (!key || typeof key !== "string")
       throw new Error("Key must be a non-empty string");
-    const fd = await import_fs.promises.open(this.filename, "r");
+    const fd = await import_fs2.promises.open(this.filename, "r");
     try {
       const stats = await fd.stat();
       let pos = 0;
@@ -350,9 +428,9 @@ var Flare2 = class {
       header.writeUInt32LE(valBuf.length, 4);
       const record = Buffer.concat([header, keyBuf, valBuf]);
       try {
-        await import_fs.promises.appendFile(this.walFile, record);
-        await import_fs.promises.appendFile(this.filename, record);
-        await import_fs.promises.truncate(this.walFile, 0);
+        await import_fs2.promises.appendFile(this.walFile, record);
+        await import_fs2.promises.appendFile(this.filename, record);
+        await import_fs2.promises.truncate(this.walFile, 0);
       } catch (err) {
         throw new Error(`Failed to delete key "${key}": ${err.message}`);
       }
@@ -361,7 +439,7 @@ var Flare2 = class {
   async *scanCollection(name) {
     if (!name || typeof name !== "string")
       throw new Error("Collection name must be a non-empty string");
-    const fd = await import_fs.promises.open(this.filename, "r");
+    const fd = await import_fs2.promises.open(this.filename, "r");
     try {
       const stats = await fd.stat();
       let pos = 0;
@@ -390,3 +468,7 @@ var Flare2 = class {
   }
 };
 var index_default = Flare2;
+// Annotate the CommonJS export names for ESM import in node:
+0 && (module.exports = {
+  FlareCache
+});

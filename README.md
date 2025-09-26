@@ -1,4 +1,15 @@
 # FlareDB 🔥
+
+## Table of Contents
+
+- [Introduction](#introduction)
+- [Features](#features)
+- [Why Project FlareDB](#why-project-flaredb)
+- [How to use?](#how-to-use)
+- [FlareCache](#flarecache)
+    - [How to use FlareCache?](#how-to-use-flarecache)
+- [Contributors](#contributors)
+
 ## Introduction:
 
 FlareDb is an ongoing project  that focuses on simplicity and efficiency. It is intended to be a self hosted database where individuals will be able to host and use with ease. The purpose of  `FlareDb` is not to compete with the likes of `sqlite`, `mongodb` and so on but rather to aid our organisation [CodeTheEarth](https://github.com/CodeTheEarth)
@@ -13,7 +24,8 @@ FlareDb is an ongoing project  that focuses on simplicity and efficiency. It is 
 ## Why Project FlareDB
 Project flareDB as stated above is to aid our organisation [CodeTheEarth](https://github.com/CodeTheEarth) with a personal self hosted database to run our operations. That said, this is a completely open source project meaninig other developers can contribute, sponsor, take inspo from and self use for themselves >_<. This project should effectively solve the issues facing our organisation and other developers which relates to complexity of other databases and for some.. pricing.
 
-## How to use?
+
+### How to use
 First make sure you have node installed
 
 - Installing dependency:
@@ -23,7 +35,6 @@ npm install https://github.com/codetheearth/flaredb
 - Initializing a database
 ```
 const db = new Flare("users.db");
-await db.init();
 ```
 - Creating a new document
 ```
@@ -53,6 +64,16 @@ await Users.updateMany({ age: 20 }, { age: 21 }); // bulk update
 await Users.deleteOne({ name: "Kaima" }); // delete first match
 await Users.deleteMany({ age: 21 }); // delete all matches
 await Users.clear(); // wipe entire collection
+```
+
+## FlareCache 
+This is a simple `redis` like key value pair db for things like cache and so on
+
+### How to use FlareCache?
+```
+const cache = new FlareCache()
+await cache.set("name", "haki")
+console.log(cache.get("name"))
 ```
 
 ### Contributors
