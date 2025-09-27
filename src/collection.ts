@@ -21,7 +21,6 @@ export class Collection {
     if (!doc || typeof doc !== "object") {
       throw new Error("Document must be a non-null object");
     }
-
     for (const key in this.schema) {
       if (doc[key] === undefined) continue;
       if (typeof doc[key] !== this.schema[key]) {
@@ -36,7 +35,6 @@ export class Collection {
     if (!doc || typeof doc !== "object") throw new Error("Document must be a non-null object");
 
     this._validate(doc);
-
     const { upsert = false, uniqueBy = [] } = options;
 
     if (upsert || uniqueBy.length > 0) {
@@ -47,9 +45,10 @@ export class Collection {
       if (Object.keys(query).length > 0) {
         const existing = await this.findOne(query);
         if (existing) {
-          Object.assign(existing, doc, { updated_at: new Date().toISOString() });
-          await this.db.put(`${this.name}:${existing._id}`, existing);
-          return new Document(existing);
+          // fix: convert Document to plain object before storing
+          const updated = { ...existing, ...doc, updated_at: new Date().toISOString() };
+          await this.db.put(`${this.name}:${existing._id}`, updated);
+          return new Document(updated);
         }
       }
     }
@@ -117,10 +116,10 @@ export class Collection {
     const doc = await this.findOne(query);
     if (!doc) throw new Error(`No document found for query: ${JSON.stringify(query)}`);
 
-    Object.assign(doc, update, { updated_at: new Date().toISOString() });
-    this._validate(doc);
-    await this.db.put(`${this.name}:${doc._id}`, doc);
-    return new Document(doc);
+    const updated = { ...doc, ...update, updated_at: new Date().toISOString() }; // fix here
+    this._validate(updated);
+    await this.db.put(`${this.name}:${doc._id}`, updated);
+    return new Document(updated);
   }
 
   async updateMany(query: Record<string, any>, update: Record<string, any>): Promise<Document[]> {
@@ -132,10 +131,10 @@ export class Collection {
 
     const updated: Document[] = [];
     for (const doc of docs) {
-      Object.assign(doc, update, { updated_at: new Date().toISOString() });
-      this._validate(doc);
-      await this.db.put(`${this.name}:${doc._id}`, doc);
-      updated.push(new Document(doc));
+      const u = { ...doc, ...update, updated_at: new Date().toISOString() }; // fix here
+      this._validate(u);
+      await this.db.put(`${this.name}:${doc._id}`, u);
+      updated.push(new Document(u));
     }
     return updated;
   }

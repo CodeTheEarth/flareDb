@@ -98,9 +98,9 @@ var Collection = class {
       if (Object.keys(query).length > 0) {
         const existing = await this.findOne(query);
         if (existing) {
-          Object.assign(existing, doc, { updated_at: (/* @__PURE__ */ new Date()).toISOString() });
-          await this.db.put(`${this.name}:${existing._id}`, existing);
-          return new Document_default(existing);
+          const updated = { ...existing, ...doc, updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+          await this.db.put(`${this.name}:${existing._id}`, updated);
+          return new Document_default(updated);
         }
       }
     }
@@ -159,10 +159,10 @@ var Collection = class {
     if (!update || typeof update !== "object") throw new Error("updateOne update must be an object");
     const doc = await this.findOne(query);
     if (!doc) throw new Error(`No document found for query: ${JSON.stringify(query)}`);
-    Object.assign(doc, update, { updated_at: (/* @__PURE__ */ new Date()).toISOString() });
-    this._validate(doc);
-    await this.db.put(`${this.name}:${doc._id}`, doc);
-    return new Document_default(doc);
+    const updated = { ...doc, ...update, updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+    this._validate(updated);
+    await this.db.put(`${this.name}:${doc._id}`, updated);
+    return new Document_default(updated);
   }
   async updateMany(query, update) {
     if (!query || typeof query !== "object") throw new Error("updateMany query must be an object");
@@ -171,10 +171,10 @@ var Collection = class {
     if (docs.length === 0) throw new Error(`No documents found for query: ${JSON.stringify(query)}`);
     const updated = [];
     for (const doc of docs) {
-      Object.assign(doc, update, { updated_at: (/* @__PURE__ */ new Date()).toISOString() });
-      this._validate(doc);
-      await this.db.put(`${this.name}:${doc._id}`, doc);
-      updated.push(new Document_default(doc));
+      const u = { ...doc, ...update, updated_at: (/* @__PURE__ */ new Date()).toISOString() };
+      this._validate(u);
+      await this.db.put(`${this.name}:${doc._id}`, u);
+      updated.push(new Document_default(u));
     }
     return updated;
   }

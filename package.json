@@ -30,7 +30,7 @@
     "url": "https://github.com/CodeTheEarth/flareDb/issues"
   },
   "homepage": "https://github.com/CodeTheEarth/flareDb#readme",
-  "private": true,
+  "private": false,
   "devDependencies": {
     "@types/bun": "latest",
     "@types/node": "^24.5.2",
